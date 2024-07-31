@@ -1,0 +1,250 @@
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/gpio.h"
+
+// Definiciones
+#define LED1 GPIO_NUM_13
+#define LED2 GPIO_NUM_14
+#define LED3 GPIO_NUM_26
+#define LED4 GPIO_NUM_25
+
+#define BOT1 GPIO_NUM_15
+#define BOT2 GPIO_NUM_21
+#define BOT3 GPIO_NUM_23
+
+// Variables de estado
+int estadoBoton = 0;
+int Modo = 0;
+int sumador = 0;
+int resta = 0;
+uint8_t cont = 0;
+
+// Variables de anti-rebote
+unsigned long lastDebounceTimeBot1 = 0;
+unsigned long lastDebounceTimeBot2 = 0;
+unsigned long lastDebounceTimeBot3 = 0;
+unsigned long debounceDelay = 50; // Tiempo de rebote en milisegundos
+
+bool lastButtonStateBot1 = 0;
+bool lastButtonStateBot2 = 0;
+bool lastButtonStateBot3 = 0;
+
+void setup(void) {
+    gpio_set_direction(LED1, GPIO_MODE_OUTPUT);
+    gpio_set_direction(LED2, GPIO_MODE_OUTPUT);
+    gpio_set_direction(LED3, GPIO_MODE_OUTPUT);
+    gpio_set_direction(LED4, GPIO_MODE_OUTPUT);
+
+    gpio_set_direction(BOT1, GPIO_MODE_INPUT);
+    gpio_set_direction(BOT2, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(BOT2, GPIO_PULLDOWN_ONLY);
+    gpio_set_direction(BOT3, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(BOT3, GPIO_PULLUP_ONLY);
+
+    gpio_set_level(LED1, 0);
+    gpio_set_level(LED2, 0);
+    gpio_set_level(LED3, 0);
+    gpio_set_level(LED4, 0);
+}
+
+void app_main(void) {
+    setup();
+
+    while (1) {
+        int readingBot1 = gpio_get_level(BOT1);
+        int readingBot2 = gpio_get_level(BOT2);
+        int readingBot3 = gpio_get_level(BOT3);
+
+        // Anti-rebote para BOT1
+        if (readingBot1 != lastButtonStateBot1) {
+            lastDebounceTimeBot1 = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        }
+        if ((xTaskGetTickCount() * portTICK_PERIOD_MS - lastDebounceTimeBot1) > debounceDelay) {
+            if (readingBot1 != estadoBoton) {
+                estadoBoton = readingBot1;
+                if (estadoBoton == 1) {
+                    Modo = !Modo;
+                    cont = 0; // Resetear contador al cambiar de modo
+                }
+            }
+        }
+        lastButtonStateBot1 = readingBot1;
+
+        // Anti-rebote para BOT2
+        if (readingBot2 != lastButtonStateBot2) {
+            lastDebounceTimeBot2 = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        }
+        if ((xTaskGetTickCount() * portTICK_PERIOD_MS - lastDebounceTimeBot2) > debounceDelay) {
+            if (readingBot2 != resta) {
+                resta = readingBot2;
+                if (resta == 1) {
+                    cont--;
+                    if (cont < 0) cont = (Modo == 1) ? 4 : 15; // Asegura que el contador no sea negativo
+                }
+            }
+        }
+        lastButtonStateBot2 = readingBot2;
+
+        // Anti-rebote para BOT3
+        if (readingBot3 != lastButtonStateBot3) {
+            lastDebounceTimeBot3 = xTaskGetTickCount() * portTICK_PERIOD_MS;
+        }
+        if ((xTaskGetTickCount() * portTICK_PERIOD_MS - lastDebounceTimeBot3) > debounceDelay) {
+            if (readingBot3 != sumador) {
+                sumador = readingBot3;
+                if (sumador == 0) { // Cambié HIGH por LOW debido a la configuración INPUT_PULLUP
+                    cont++;
+                    if (Modo == 1) {
+                        if (cont > 4) {
+                            cont = 0;
+                        }
+                    } else {
+                        if (cont > 15) {
+                            cont = 0;
+                        }
+                    }
+                }
+            }
+        }
+        lastButtonStateBot3 = readingBot3;
+
+        if (Modo == 0) {
+            // Modo binario
+            switch (cont) {
+                case 0:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 1:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 2:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 3:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 4:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 5:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 6:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 7:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 8:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 1);
+                    break;
+                case 9:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 1);
+                    break;
+                case 10:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 1);
+                    break;
+                case 11:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 1);
+                    break;
+                case 12:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 1);
+                    break;
+                case 13:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 1);
+                    break;
+                case 14:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 1);
+                    break;
+                case 15:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 1);
+                    break;
+            }
+        } else {
+            // Modo decimal
+            switch (cont) {
+                case 0:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 1:
+                    gpio_set_level(LED1, 1);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 2:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 1);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 3:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 1);
+                    gpio_set_level(LED4, 0);
+                    break;
+                case 4:
+                    gpio_set_level(LED1, 0);
+                    gpio_set_level(LED2, 0);
+                    gpio_set_level(LED3, 0);
+                    gpio_set_level(LED4, 1);
+                    break;
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(100)); // Espera de 100 ms para reducir la velocidad del ciclo
+    }
+}
