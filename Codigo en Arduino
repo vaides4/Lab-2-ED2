@@ -1,0 +1,241 @@
+#include <Arduino.h>
+
+// Definiciones
+#define LED1 13
+#define LED2 14
+#define LED3 26
+#define LED4 25
+
+#define BOT1 15
+#define BOT2 21
+#define BOT3 23
+
+int estadoBoton;
+int Modo;
+int sumador;
+int resta;
+uint8_t cont;
+
+// Variables de anti-rebote
+unsigned long lastDebounceTimeBot1 = 0;
+unsigned long lastDebounceTimeBot2 = 0;
+unsigned long lastDebounceTimeBot3 = 0;
+unsigned long debounceDelay = 50; // Tiempo de rebote en milisegundos
+
+bool lastButtonStateBot1 = LOW;
+bool lastButtonStateBot2 = LOW;
+bool lastButtonStateBot3 = LOW;
+
+void setup() {
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+  pinMode(LED3, OUTPUT);
+  pinMode(LED4, OUTPUT);
+
+  pinMode(BOT1, INPUT);
+  pinMode(BOT2, INPUT_PULLDOWN);
+  pinMode(BOT3, INPUT_PULLUP);
+
+  digitalWrite(LED1, LOW);
+  digitalWrite(LED2, LOW);
+  digitalWrite(LED3, LOW);
+  digitalWrite(LED4, LOW);
+
+  digitalWrite(BOT1, LOW);
+  digitalWrite(BOT2, LOW);
+  digitalWrite(BOT3, LOW);
+}
+
+void loop() {
+  int readingBot1 = digitalRead(BOT1);
+  int readingBot2 = digitalRead(BOT2);
+  int readingBot3 = digitalRead(BOT3);
+
+  // Anti-rebote para BOT1
+  if (readingBot1 != lastButtonStateBot1) {
+    lastDebounceTimeBot1 = millis();
+  }
+  if ((millis() - lastDebounceTimeBot1) > debounceDelay) {
+    if (readingBot1 != estadoBoton) {
+      estadoBoton = readingBot1;
+      if (estadoBoton == HIGH) {
+        Modo = !Modo;
+      }
+    }
+  }
+  lastButtonStateBot1 = readingBot1;
+
+  // Anti-rebote para BOT2
+  if (readingBot2 != lastButtonStateBot2) {
+    lastDebounceTimeBot2 = millis();
+  }
+  if ((millis() - lastDebounceTimeBot2) > debounceDelay) {
+    if (readingBot2 != resta) {
+      resta = readingBot2;
+      if (resta == HIGH) {
+        cont--;
+      }
+    }
+  }
+  lastButtonStateBot2 = readingBot2;
+
+  // Anti-rebote para BOT3
+  if (readingBot3 != lastButtonStateBot3) {
+    lastDebounceTimeBot3 = millis();
+  }
+  if ((millis() - lastDebounceTimeBot3) > debounceDelay) {
+    if (readingBot3 != sumador) {
+      sumador = readingBot3;
+      if (sumador == LOW) { // Cambié HIGH por LOW debido a la configuración INPUT_PULLUP
+        cont++;
+        if (Modo == 1) {
+          if (cont > 4) {
+            cont = 0;
+          }
+        } 
+        else {
+          if (cont > 15) {
+            cont = 0; 
+          }
+        }
+      }
+    }
+  }
+  lastButtonStateBot3 = readingBot3;
+
+  if (Modo == 0) {
+    // Modo binario
+    switch (cont) {
+      case 0:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+        break;
+      case 1:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+        break;
+      case 2:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+        break;
+      case 3:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+        break;
+      case 4:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, LOW);
+        break;
+      case 5:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, LOW);
+        break;
+      case 6:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, LOW);
+        break;
+      case 7:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, LOW);
+        break;
+      case 8:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, HIGH);
+        break;
+      case 9:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, HIGH);
+        break;
+      case 10:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, HIGH);
+        break;
+      case 11:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, HIGH);
+        break;
+      case 12:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, HIGH);
+        break;
+      case 13:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, HIGH);
+        break;
+      case 14:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, HIGH);
+        break;
+      case 15:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, HIGH);
+        break;
+    }
+  } else {
+    // Modo decimal
+    switch (cont) {
+      case 0:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+        break;
+      case 1:
+        digitalWrite(LED1, HIGH);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+        break;
+      case 2:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, HIGH);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, LOW);
+        break;
+      case 3:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, HIGH);
+        digitalWrite(LED4, LOW);
+        break;
+      case 4:
+        digitalWrite(LED1, LOW);
+        digitalWrite(LED2, LOW);
+        digitalWrite(LED3, LOW);
+        digitalWrite(LED4, HIGH);
+        break;
+    }
+  }
+}
